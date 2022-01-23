@@ -1,0 +1,190 @@
+##########################################################################
+# Name: Michael Campbell
+# Date:
+    from datetime import date
+    today = date.today()
+    print("Today's date:", today)
+# Program: Python - 3template_MB_logistic_reg.py
+# Purpose: Logistic Regression Template
+# Steps: 1. Import Libraries
+#        2. Import Dataset
+#        3. Define X (Independent variable(s), Y (Dependent variable)
+#        4. Split the dataset in training and test sets
+#        5. Train the model on the training set
+#        6. Predict the test set results
+#        7. Evaluate the model
+#        8. Plot the results
+#        9. Predicted values
+##########################################################################
+
+# 1. Importing the libraries
+import numpy             as np        # For numerical computation
+import pandas            as pd        # Structured data wrangling using dataframe
+import os                             # Operating system dependent functionality
+import matplotlib        as mpl       # Additional plotting functionality
+mpl.rcParams['figure.dpi'] = 400      # High resolution figures
+import matplotlib.pyplot as plt       # Plotting paackage
+import seaborn           as sns       # Makes statistical graphics; Runs on top of matplotlib and integrates with pandas data structure. 
+sns.set()
+%matplotlib inline                    # Enable seeing the graph when it comes up
+
+# 2. Import dataset
+#  Location of input files
+for dirname, _, filenames in os.walk('U:/MikeC/Python/DEVP/1DataCollection'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+########
+os.chdir('U:/MikeC/Python/DEVP/1DataCollection')       # Location of data files
+df = pd.read_csv('2DP_powersupply_data.csv')
+#
+## The data from Preprocessing must be comming into the Model building phase as all numberic 
+df.head(10)
+df.info()                          # Obtain the data type of the columns 
+#
+# Remove any unwanted column(s)
+df = df.drop(['class','class_identity'],axis=1)
+### df = df.drop(['column1','column2'],axis=1)
+df.head(10)
+df.info()                          # Obtain the data type of the columns 
+#
+# removing null values to avoid errors 
+df.dropna(inplace = True) 
+#
+# Categorical data have to be changed to categorical type before changed to numeric. For instnace column1 values Male & Female
+# Cast from the generic object type to int64 using the .astype method
+df['class_identity'] = df['class_identity'].astype('category')
+df['class_identity'] = df['class_identity'].astype('int64')
+df.info()
+# Then 
+column1_dummy = pd.get_dummies(df.column1)
+column1_dummy.head()
+# Then, join the created numerical category with the dataframe columns
+df = pd.concat([df, column1_dummy], axis = 1)
+#################################################################################################
+# Machine Learning
+# Then convert the values into an array by using the values method and removing unwanted columns
+# Note: Drop column that you are predicting on. It should not be a part of the X dataset
+#################################################################################################
+# 3. Define X (Independent variables(s)), Y (Dependent variable)
+df.head()
+X = df.drop(['column1','column2','column4'], axis = 1).values
+# Then, the column predicting on will be the Y value. Note: The Y column is the value being dropped for X that you are predicting on 
+Y = df.column4.values     # This has to be an array for prediction as well
+#
+# Splitting the dataset into the Training set and Test set
+from sklearn.model_selection import train_test_split  # Test the models ability to predict new data that was ot used in estimating it.
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.25, random_state = 10, stratify=y)
+# 25% of data in X_test and y_test; Random_state can be any number; stratefy so that the data is balanced for test and train variables
+
+# Feature Scaling
+# Since the independent variable(s) is/are the feature, it helps to normalize the data within a particular range.
+# Lies between the minimum absolute value (0) and the maximum value (1). Normalize/standardize (mean = 0 and standard deviation = 1)
+# before applying algorithm techniques.
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+## Verify that the mean of each feature(column) is zero (0)
+X_train.mean(axis=0)
+## Verify that the std of each feature(column) is one (1)
+X_train.std(axis=0)
+#
+# Data Dimensions
+X_train.shape, X_test.shape
+y_train.shape, y_test.shape
+#
+# 5. Train the model on the training set
+#
+# Fitting Logistic Regression to the Training set
+from sklearn import linear_model
+log_reg = linear_model.LogisticRegression()          # Defines the regression model
+log_reg.fit(X_train, y_train)                        # Builds the training model
+#
+# 6. Predict the test set results - Prediction on the 25% Test data set against the training model
+ypred = log_reg.predict(X_test)
+print(ypred)
+# 7. Evaluate the model
+# Test/Evaluate how accurate the model is based on the testing datasets by using the accuracy score and r2_score
+log_reg.score(X_test,y_test)
+
+# Example Result: .086590264553434 which is 86.5% accuracy on the test data. Generally, it would be in the 50-60% range and would need to be tuned for a higher percent
+log_reg_l1 = linear_model.LogisticRegression(penalty='l1')
+log_reg_l1(X_train, y_train)
+log_reg_l1.fit(X_train, y_train)
+# Then, re-check the accuracy score
+log_reg_l1.score(X_test, y_test)  # The percentage accuracy should be higher
+# Another improvement technique - Search for the best parameter for the model using GridSearchCV
+from sklearn.model_selection import GridSearchCV
+grid = GridSearchCV(log_reg_l1,{'C':[.001, .01, .1, 10]})
+grid.fit(X_train, y_train)
+grid.best_params_
+grid.best_score_
+# Another, if you want to predict on a new value, display and pick the values from the dataframe
+df.head()
+x_new = [[1,2500,150,0,0,0,0,1]]  # These are just example values displayed from the dataframe head() method
+log_reg_l1.predict(x_new)         # Prediction
+
+# Making the Confusion Matrix. The Confusion matrix is used to evaluate the correctness/performance of the classification model.
+# Each row of the Confusion Matrix represents the instances of an actual class, and each column represents the instances of a predicted class.
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, x_new)
+
+# Accuracy of the model
+from sklearn.metrics import accuracy_score
+accuracy_score(y_test, x_new)
+
+# 8. Plot the results - Make a scatter plot of the data
+## 8a. Examine  the data
+print (y_test, ypred)
+## 8b. Use the seaborn package
+sns.scatterplot(y_test, ypred)
+### Modify the marker
+sns.scatterplot(y_test, ypred, marker = "+")
+### Make the dots more clear, which is less stacked
+sns.scatterplot(y_test, ypred, alpha = 0.5)
+###
+## Try this as well
+plt.figure(fisize = (15, 10))
+plt.scatter(y_test, ypred)
+plt.xlabel('Actual')
+plt.ylabel('Predicted')
+plt.title('Actual vs. Predicted')
+
+# Visualising the Training set results
+from matplotlib.colors import ListedColormap
+X_set, y_set = X_train, y_train
+X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, stop = X_set[:, 0].max() + 1, step = 0.01),
+                     np.arange(start = X_set[:, 1].min() - 1, stop = X_set[:, 1].max() + 1, step = 0.01))
+plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), X2.ravel()]).T).reshape(X1.shape),
+             alpha = 0.75, cmap = ListedColormap(('red', 'green')))
+plt.xlim(X1.min(), X1.max())
+plt.ylim(X2.min(), X2.max())
+for i, j in enumerate(np.unique(y_set)):
+    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1],
+                c = ListedColormap(('red', 'green'))(i), label = j)
+plt.title('Logistic Regression (Training set)')
+plt.xlabel('Age')
+plt.ylabel('Estimated Salary')
+plt.legend()
+plt.show()
+
+# Visualising the Test set results
+from matplotlib.colors import ListedColormap
+X_set, y_set = X_test, y_test
+X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, stop = X_set[:, 0].max() + 1, step = 0.01),
+                     np.arange(start = X_set[:, 1].min() - 1, stop = X_set[:, 1].max() + 1, step = 0.01))
+plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), X2.ravel()]).T).reshape(X1.shape),
+             alpha = 0.75, cmap = ListedColormap(('red', 'green')))
+plt.xlim(X1.min(), X1.max())
+plt.ylim(X2.min(), X2.max())
+for i, j in enumerate(np.unique(y_set)):
+    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1],
+                c = ListedColormap(('red', 'green'))(i), label = j)
+plt.title('Logistic Regression (Test set)')
+plt.xlabel('Age')
+plt.ylabel('Estimated Salary')
+plt.legend()
+plt.show()
+#
+# 9. Predicted Values
+pred_y_df = pd.dataframe ({'Actual Value ':y_test, 'Predicted Value ':ypred, 'Difference ':y_test - ypred})

@@ -1,0 +1,227 @@
+##########################################################################
+# Name: Michael Campbell
+# Date:
+    from datetime import date
+    today = date.today()
+    print("Today's date:", today)
+# Program: Python - 3template_MB_linear_reg.py
+# Purpose: Linear Regression Template
+# Steps: 1. Import Libraries
+#        2. Import Dataset
+#        3. Define X (Independent variable(s), Y (Dependent variable)
+#        4. Split the dataset in training and test sets
+#        5. Train the model on the training set
+#        6. Predict the test set results
+#        7. Evaluate the model
+#        8. Plot the results
+#        9. Predicted values
+##########################################################################
+
+# 1. Importing the libraries
+import numpy             as np        # For numerical computation
+import pandas            as pd        # Structured data wrangling using dataframe
+import os                             # Operating system dependent functionality
+import matplotlib        as mpl       # Additional plotting functionality
+mpl.rcParams['figure.dpi'] = 400      # High resolution figures
+import matplotlib.pyplot as plt       # Plotting paackage
+import seaborn           as sns sns.set() # Makes statistical graphics; Runs on top of matplotlib and integrates with pandas data structure. 
+%matplotlib inline                    # Enable seeing the graph when it comes up
+#
+# 2. Import Dataset 
+#  Location of input files
+for dirname, _, filenames in os.walk('U:/MikeC/Python/DEVP/1DataCollection'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+########
+os.chdir('U:/MikeC/Python/DEVP/1DataCollection')       # Location of data files
+df = pd.read_csv('2DP_powersupply_data.csv')
+#
+## The data from Preprocessing must be comming into the Model building phase as all numberic 
+df.head(10)
+df.columns
+#
+# Remove any unwanted column(s)
+df = df.drop(['class'],axis=1)
+### df = df.drop(['column1','column2'],axis=1)
+df.head(10)
+df.info()                          # Obtain the data type of the columns 
+#
+# removing null values to avoid errors 
+df.dropna(inplace = True) 
+### Might not need to do the categorical data as should be done from the analysis. But, Just in case
+# Categorical data have to be changed to "categorical type" before changed to numeric. For instance column1 values Male & Female
+df['class_identity'] = df['class_identity'].astype('category')
+df.info() 
+# Then 
+class_identity_dummy = pd.get_dummies(df.class_identity)
+class_identity_dummy.head(10)
+# Then, join the created numerical category with the dataframe columns
+df = pd.concat([df, class_identity_dummy], axis = 1)
+df.head(10)
+df.info()  
+############################################## End Categorical Conversion ####
+#
+# Cast from the generic object type to int64 using the .astype method
+df['Female'] = df['Female'].astype('int64')
+df['Male'] = df['Male'].astype('int64')
+df['mass'] = df['mass'].astype('int64')
+df['pedi'] = df['pedi'].astype('int64')
+#### df['class_identity'] = df['class_identity'].astype('int64')
+# Remove any unwanted column(s)
+df = df.drop(['class_identity'],axis=1)
+### df.drop(df.columns[[14, 15]], axis=1, inplace=True)
+df.columns
+df.columns.get_loc('age')    # Identify the location (index) of a column
+## df2 = df.copy()
+## df = df2.copy()
+df.iloc[:, 8:10]         # Verify the duplicated columns to be dropped
+## df.drop(df.iloc[:, 10:12], inplace=True, axis=1)
+# Remove columns based on duplicate column names
+df = df.loc[:,~df.columns.duplicated()]
+df.head(40)
+df.info()                          # Obtain the data type of the columns 
+#
+## Visualize the data by doing a correlation matrix  (Already done Correlation Matrix in Analysis)
+df.head()
+sns.heatmap(df.corr())
+#
+####### If the data has any string attributes (categorical data) needed in the prediction, the data has to be
+# converted by encoding
+# Example data:   
+#    Spend    Route     Network   Origin     Destination
+#  0 3534     6756      23213     New York   5457
+#  1 75       6345      08997     Delaware   432423
+# Then the column Origin would have to be encoded, which would be column 3.
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+labelencoder = LabelEncoder()
+X[:, 3] = labelencoder.fit_transform(X[:, 3])
+
+onehotencoder = OneHotEcoder(categorical_features = [3]) 
+X = onehotencoder.fit_transform(X).toarray()  # Must be array numbers
+print (X[0])       # just to verify the arrays that the computer can understand
+#
+# Avoid Dummy variables created from the onehotencoder process that created 2 columns; just need one column
+X = X[: , 1:]       # Removes the extra column created by the onehoteencoder process
+
+############################################################################################################ 
+# Machine Learning
+# Then convert the values into an array by using the values method and removing unwanted columns
+# Note: Drop column(s) that you ARE NOT predicting on. It should not be a part of the X dataset
+############################################################################################################
+# 3. Define X (Independent variable(s), Y (Dependent variable)
+df.info()
+df.head()
+X = df.drop(['preg','plas','pres','skin','mass','pedi','Female','Male'], axis = 1).values
+# Then, the column predicting on will be the Y value. Note: The Y column is the value being dropped for variable X that you are predicting on 
+Y = df.Male.values     # This has to be an array for prediction as well
+#
+print (X,Y)  
+# 4. Split the dataset in training and test sets
+# Test the models ability to predict new data that was ot used in estimating it.
+from sklearn.model_selection import train_test_split  
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.25, random_state = 10, stratify=y)
+# 25% of data in X_test and y_test; Random_state can be any number; stratefy so that the data is balanced for test and train variables
+# Feature Scaling
+# Since the independent variable(s) is the feature, it helps to normalize the data within a particular range.
+# Lies between the minimum absolute value (0) and the maximum value (1). Normalize/standardize (mean = 0 and standard deviation = 1)
+# before applying algorithm techniques.
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+## Verify that the mean of each feature(column) is zero (0)
+X_train.mean(axis=0)
+## Verify that the std of each feature(column) is one (1)
+X_train.std(axis=0)
+#
+# Data Dimensions
+X_train.shape, X_test.shape
+y_train.shape, y_test.shape
+#
+# 5. Train the model on the training set (Showing two ways; choose one)
+# Simple Linear Regression (Just 2 variables - X, Y) - Fitting by using the Training set
+from sklearn import linear_model
+from sklearn.metrics import mean_squared_error, r2_score   # Evaluates the performance of the model
+model = linear_model.LinearRegression()                    # Defines the Regression model
+model.fit(X_train, y_train)                                # Builds the training model
+###################
+# Multiple Linear Regression ( > 2 variables i.e., several independent variables X to determine Y dependent variable) - Fit by using the Training set
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()                             # Defines the Regression model
+regressor.fit(X_train, y_train)                            # Builds the training model
+##############################
+# 6. Predict the test set results -  Prediction on the 25% of the test dataset against the training model
+ypred = model.predict(X_test)
+print (ypred)
+# 7. Evaluate the model
+# Test/Evaluate how accurate the model is based on the testing datasets by using the accuracy score and r2_score
+model.score(X_test,y_test)
+r2_score (y_test, ypred)         # Calculates the r squared value
+# Can also do - Accuracy of the model
+from sklearn.metrics import accuracy_score
+accuracy_score (y_test, ypred)
+
+# Model Performance
+print('Coefficients: ', model.coef_) 
+print('Intercept: ', model.intercept_)
+print('Mean Squared Error (MSE): %.2f' % mean_squared_error (y_test, ypred))
+print('Coefficient of determination (R^2): %.2f' % r2_score(y_test, ypred))
+#
+print (df.feature_names)
+#
+# 8. Plot the results - Make a scatter plot of the data
+## 8a. Examine the data
+y_test, ypred
+## 8b. Use the Seaborn package
+sns.scatterplot(y_test, ypred)
+## Modify the marker
+sns.scatterplot(y_test, ypred, marker = "+")
+## Make  the dot more clear, which is less stacked
+sns.scatterplot(y_test, ypred, alpha = .05)
+###
+## Try this as well
+plt.figure(fisize = (15,10))
+plt.scatter(y_test, ypred)
+plt.xlabel('Actual')
+plt.ylabel('Predicted')
+plt.title('Actual vs. Predicted')
+#
+# Visualising the Training set results
+from matplotlib.colors import ListedColormap
+X_set, y_set = X_train, y_train
+X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, stop = X_set[:, 0].max() + 1, step = 0.01),
+                     np.arange(start = X_set[:, 1].min() - 1, stop = X_set[:, 1].max() + 1, step = 0.01))
+plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), X2.ravel()]).T).reshape(X1.shape),
+             alpha = 0.75, cmap = ListedColormap(('red', 'green')))
+plt.xlim(X1.min(), X1.max())
+plt.ylim(X2.min(), X2.max())
+for i, j in enumerate(np.unique(y_set)):
+    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1],
+                c = ListedColormap(('red', 'green'))(i), label = j)
+plt.title('Logistic Regression (Training set)')
+plt.xlabel('Age')
+plt.ylabel('Estimated Salary')
+plt.legend()
+plt.show()
+
+# Visualising the Test set results
+from matplotlib.colors import ListedColormap
+X_set, y_set = X_test, y_test
+X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, stop = X_set[:, 0].max() + 1, step = 0.01),
+                     np.arange(start = X_set[:, 1].min() - 1, stop = X_set[:, 1].max() + 1, step = 0.01))
+plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), X2.ravel()]).T).reshape(X1.shape),
+             alpha = 0.75, cmap = ListedColormap(('red', 'green')))
+plt.xlim(X1.min(), X1.max())
+plt.ylim(X2.min(), X2.max())
+for i, j in enumerate(np.unique(y_set)):
+    plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1],
+                c = ListedColormap(('red', 'green'))(i), label = j)
+plt.title('Logistic Regression (Test set)')
+plt.xlabel('Age')
+plt.ylabel('Estimated Salary')
+plt.legend()
+plt.show()
+#
+# 9. Predicted Values
+pred_y_df = pd.dataframe({'Actual Value ':y_test, 'Predicted Value ':ypred, 'Difference ': y_test - ypred})
+pred_y_df[0:20]
